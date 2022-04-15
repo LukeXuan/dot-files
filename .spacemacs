@@ -42,7 +42,9 @@ This function should only modify configuration layer settings."
      helm
      (auto-completion :variables
                       auto-completion-enable-sort-by-usage t
-                      auto-completion-tab-key-behavior 'nil)
+                      auto-completion-tab-key-behavior nil
+                      auto-completion-use-company-box nil
+                      auto-completion-use-company-posframe t)
      better-defaults
      emacs-lisp
      git
@@ -82,7 +84,6 @@ This function should only modify configuration layer settings."
      visual-regexp
      hexo
      boogie-friends
-     company-posframe
      )
    ;; A list of packages that cannot be updated.
    dotspacemacs-frozen-packages '()
@@ -110,9 +111,13 @@ It should only modify the values of Spacemacs settings."
   ;; This setq-default sexp is an exhaustive list of all the supported
   ;; spacemacs settings.
   (setq-default
-   ;; If non-nil then enable support for the portable dumper. You'll need
-   ;; to compile Emacs 27 from source following the instructions in file
+   ;; If non-nil then enable support for the portable dumper. You'll need to
+   ;; compile Emacs 27 from source following the instructions in file
    ;; EXPERIMENTAL.org at to root of the git repository.
+   ;;
+   ;; WARNING: pdumper does not work with Native Compilation, so it's disabled
+   ;; regardless of the following setting when native compilation is in effect.
+   ;;
    ;; (default nil)
    dotspacemacs-enable-emacs-pdumper nil
 
@@ -219,6 +224,11 @@ It should only modify the values of Spacemacs settings."
    ;; The minimum delay in seconds between number key presses. (default 0.4)
    dotspacemacs-startup-buffer-multi-digit-delay 0.4
 
+   ;; If non-nil, show file icons for entries and headings on Spacemacs home buffer.
+   ;; This has no effect in terminal or if "all-the-icons" package or the font
+   ;; is not installed. (default nil)
+   dotspacemacs-startup-buffer-show-icons t
+
    ;; Default major mode for a new empty buffer. Possible values are mode
    ;; names such as `text-mode'; and `nil' to use Fundamental mode.
    ;; (default `text-mode')
@@ -252,7 +262,7 @@ It should only modify the values of Spacemacs settings."
    ;; refer to the DOCUMENTATION.org for more info on how to create your own
    ;; spaceline theme. Value can be a symbol or list with additional properties.
    ;; (default '(spacemacs :separator wave :separator-scale 1.5))
-   dotspacemacs-mode-line-theme '(spacemacs :separator arrow :separator-scale 1.0)
+   dotspacemacs-mode-line-theme '(spacemacs :separator arrow :separator-scale 1.5)
 
    ;; If non-nil the cursor color matches the state color in GUI Emacs.
    ;; (default t)
@@ -261,8 +271,8 @@ It should only modify the values of Spacemacs settings."
    ;; Default font or prioritized list of fonts. The `:size' can be specified as
    ;; a non-negative integer (pixel size), or a floating-point (point size).
    ;; Point size is recommended, because it's device independent. (default 10.0)
-   dotspacemacs-default-font '("Source Code Pro"
-                               :size 28
+   dotspacemacs-default-font '("Fira Code"
+                               :size 14.0
                                :weight normal
                                :width normal)
 
@@ -365,7 +375,7 @@ It should only modify the values of Spacemacs settings."
    ;; If non-nil the frame is maximized when Emacs starts up.
    ;; Takes effect only if `dotspacemacs-fullscreen-at-startup' is nil.
    ;; (default nil) (Emacs 24.4+ only)
-   dotspacemacs-maximized-at-startup nil
+   dotspacemacs-maximized-at-startup t
 
    ;; If non-nil the frame is undecorated when Emacs starts up. Combine this
    ;; variable with `dotspacemacs-maximized-at-startup' in OSX to obtain
@@ -406,8 +416,8 @@ It should only modify the values of Spacemacs settings."
    ;; If set to `t', `relative' or `visual' then line numbers are enabled in all
    ;; `prog-mode' and `text-mode' derivatives. If set to `relative', line
    ;; numbers are relative. If set to `visual', line numbers are also relative,
-   ;; but lines are only visual lines are counted. For example, folded lines
-   ;; will not be counted and wrapped lines are counted as multiple lines.
+   ;; but only visual lines are counted. For example, folded lines will not be
+   ;; counted and wrapped lines are counted as multiple lines.
    ;; This variable can also be set to a property list for finer control:
    ;; '(:relative nil
    ;;   :visual nil
@@ -501,14 +511,14 @@ It should only modify the values of Spacemacs settings."
    ;; (default nil)
    dotspacemacs-whitespace-cleanup nil
 
-   ;; If non nil activate `clean-aindent-mode' which tries to correct
-   ;; virtual indentation of simple modes. This can interfer with mode specific
+   ;; If non-nil activate `clean-aindent-mode' which tries to correct
+   ;; virtual indentation of simple modes. This can interfere with mode specific
    ;; indent handling like has been reported for `go-mode'.
    ;; If it does deactivate it here.
    ;; (default t)
    dotspacemacs-use-clean-aindent-mode t
 
-   ;; Accept SPC as y for prompts if non nil. (default nil)
+   ;; Accept SPC as y for prompts if non-nil. (default nil)
    dotspacemacs-use-SPC-as-y nil
 
    ;; If non-nil shift your number row to match the entered keyboard layout
@@ -528,7 +538,7 @@ It should only modify the values of Spacemacs settings."
    dotspacemacs-pretty-docs nil
 
    ;; If nil the home buffer shows the full path of agenda items
-   ;; and todos. If non nil only the file name is shown.
+   ;; and todos. If non-nil only the file name is shown.
    dotspacemacs-home-shorten-agenda-source nil
 
    ;; If non-nil then byte-compile some of Spacemacs files.
@@ -548,14 +558,16 @@ See the header of this file for more information."
 This function is called immediately after `dotspacemacs/init', before layer
 configuration.
 It is mostly for variables that should be set before packages are loaded.
-If you are unsure, try setting them in `dotspacemacs/user-config' first.")
+If you are unsure, try setting them in `dotspacemacs/user-config' first."
+)
 
 
 (defun dotspacemacs/user-load ()
   "Library to load while dumping.
 This function is called only while dumping Spacemacs configuration. You can
 `require' or `load' the libraries of your choice that will be included in the
-dump.")
+dump."
+)
 
 
 (defun dotspacemacs/user-config ()
@@ -569,6 +581,7 @@ before packages are loaded."
 
   (setq centaur-tabs-cycle-scope 'tabs)
   (spacemacs/toggle-indent-guide-globally-on)
+  (spacemacs/toggle-fill-column-indicator-globally-on)
 
   (eval-after-load 'evil
     '(progn
@@ -621,9 +634,11 @@ before packages are loaded."
   (with-eval-after-load 'company-coq
     (define-key company-coq-map (kbd "<M-return>") nil)
     )
-  (setq-default coq-compiler "/home/luke/.opam/4.11.1+flambda/bin/coqc")
-  (setq-default coq-prog-name "/home/luke/.opam/4.11.1+flambda/bin/coqtop")
-  (setq-default coq-dependency-analyzer "/home/luke/.opam/4.11.1+flambda/bin/coqdep")
+  (let ((coq-root (concat (getenv "HOME") "/.opam/default/bin")))
+    (setq-default coq-compiler (concat coq-root "/coqc")
+                  coq-prog-name (concat coq-root "/coqtop")
+                  coq-dependency-analyzer (concat coq-root "/coqdep"))
+    )
 
   ;; CSharp
   (c-add-style "csharp-style"
@@ -652,9 +667,6 @@ before packages are loaded."
     (prettify-symbols-mode -1))
   (add-hook 'dafny-mode-hook #'no-prettification-in-dafny-mode)
 
-  ;; company
-  (require 'company-posframe)
-  (company-posframe-mode 1)
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
@@ -673,33 +685,5 @@ This function is called at the very end of Spacemacs initialization."
  '(evil-want-Y-yank-to-eol nil)
  '(package-selected-packages
    '(dap-mode bui tree-mode gnu-elpa-keyring-update lsp-ui lsp-treemacs lsp-python-ms python helm-lsp cquery company-lsp ccls writeroom-mode visual-fill-column proof-general merlin google-translate evil-magit dumb-jump doom-modeline company-go centered-cursor-mode ace-link auctex counsel swiper ivy company window-purpose helm helm-core flycheck treemacs ace-window avy org-plus-contrib hydra yasnippet-snippets yapfify xterm-color ws-butler winum which-key web-mode web-beautify volatile-highlights visual-regexp vi-tilde-fringe uuidgen utop use-package unfill tuareg treemacs-projectile treemacs-evil toc-org tagedit systemd symon string-inflection spaceline-all-the-icons smeargle slim-mode shrink-path shell-pop seeing-is-believing scss-mode sass-mode rvm ruby-tools ruby-test-mode ruby-refactor ruby-hash-syntax rubocop rspec-mode robe reveal-in-osx-finder restart-emacs rbenv rake rainbow-delimiters pyvenv pytest pyenv-mode py-isort pug-mode prettier-js popwin pippel pipenv pip-requirements pfuture persp-mode pdf-tools pcap-mode password-generator pass paradox overseer osx-trash osx-dictionary org-bullets open-junk-file omnisharp ocp-indent nameless mwim multi-term move-text mmm-mode minitest markdown-toc magit-svn magit-gitflow macrostep lorem-ipsum livid-mode live-py-mode link-hint launchctl json-navigator json-mode js2-refactor js-doc indent-guide importmagic impatient-mode imenu-list hungry-delete ht hlint-refactor hl-todo hindent highlight-parentheses highlight-numbers highlight-indentation hexo helm-xref helm-themes helm-swoop helm-pydoc helm-purpose helm-projectile helm-mode-manager helm-make helm-hoogle helm-gitignore helm-git-grep helm-flx helm-descbinds helm-css-scss helm-company helm-c-yasnippet helm-ag haskell-snippets google-c-style golden-ratio godoctor go-tag go-rename go-impl go-guru go-gen-test go-fill-struct go-eldoc gitignore-templates gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe git-gutter-fringe+ gh-md fuzzy font-lock+ flyspell-correct-helm flycheck-pos-tip flycheck-haskell flx-ido fill-column-indicator fancy-battery eyebrowse expand-region evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-numbers evil-nerd-commenter evil-matchit evil-lisp-state evil-lion evil-indent-plus evil-iedit-state evil-goggles evil-exchange evil-ediff evil-cleverparens evil-args evil-anzu eval-sexp-fu eshell-z eshell-prompt-extras esh-help erc-yt erc-view-log erc-social-graph erc-image erc-hl-nicks emmet-mode elisp-slime-nav eldoc-eval editorconfig dotenv-mode disaster diminish diff-hl cython-mode csv-mode counsel-projectile company-web company-tern company-statistics company-ghci company-coq company-cabal company-c-headers company-auctex company-anaconda column-enforce-mode cmm-mode clean-aindent-mode clang-format chruby bundler browse-at-remote boogie-friends bison-mode auto-yasnippet auto-highlight-symbol auto-dictionary auto-compile auctex-latexmk aggressive-indent ace-jump-helm-line ac-ispell))
- '(safe-local-variable-values
-   '((coq-compiler . "/home/luke/.opam/4.02.0/bin/coqc")
-     (coq-dependency-analyzer . "/home/luke/.opam/4.02.0/bin/coqdep")
-     (coq-compiler . "/home/luke/.opam/4.11.1+flambda/bin/coqc")
-     (coq-dependency-analyzer . "/home/luke/.opam/4.11.1+flambda/bin/coqdep")
-     (coq-prog-name . "/home/luke/.opam/4.02.0/bin/coqtop")
-     (dafny-verification-backend)
-     (coq-prog-name . "/home/luke/.opam/4.11.1+flambda/bin/coqtop")
-     (coq-prog-name . "/home/luke/.opam/4.07.1+flambda/bin/coqtop"))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
  )
 )
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(evil-want-Y-yank-to-eol nil)
- '(package-selected-packages
-   '(yapfify xterm-color ws-butler winum which-key web-beautify volatile-highlights visual-regexp vi-tilde-fringe uuidgen use-package unfill undo-tree toc-org systemd spaceline powerline smeargle shell-pop restart-emacs rainbow-delimiters pyvenv pytest pyenv-mode py-isort popwin pip-requirements persp-mode pcre2el paradox spinner orgit org-plus-contrib org-bullets open-junk-file omnisharp neotree mwim multi-term move-text mmm-mode markdown-toc magit-gitflow magit-popup magit macrostep lorem-ipsum livid-mode skewer-mode simple-httpd live-py-mode linum-relative link-hint json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc indent-guide hydra lv hy-mode dash-functional hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hexo helm-themes helm-swoop helm-pydoc helm-projectile projectile helm-mode-manager helm-make helm-gitignore request helm-flx helm-descbinds helm-company helm-c-yasnippet helm-ag google-translate golden-ratio gmail-message-mode ham-mode markdown-mode html-to-markdown gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe+ git-gutter-fringe fringe-helper git-gutter+ git-gutter git-commit with-editor transient gh-md fuzzy flyspell-correct-helm flyspell-correct flymd flycheck-pos-tip pos-tip flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist highlight evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-ediff evil-args evil-anzu anzu evil goto-chg eval-sexp-fu eshell-z eshell-prompt-extras esh-help elisp-slime-nav edit-server dumb-jump disaster diminish diff-hl define-word cython-mode csv-mode csharp-mode tree-sitter-langs tree-sitter-indent tree-sitter tsc company-statistics company-c-headers company-auctex company-anaconda column-enforce-mode coffee-mode cmake-mode clean-aindent-mode clang-format boogie-friends company flycheck pkg-info epl bind-map bind-key auto-yasnippet yasnippet auto-highlight-symbol auto-dictionary auto-compile packed auctex-latexmk auctex anaconda-mode pythonic f dash s aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core async ac-ispell auto-complete popup)))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
