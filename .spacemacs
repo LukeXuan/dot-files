@@ -70,7 +70,8 @@ This function should only modify configuration layer settings."
                       syntax-checking-enable-tooltips t)
      coq
      csharp
-     ;; ocaml
+     ocaml
+     fstar
      (version-control :variables
                       version-control-diff-tool 'diff-hl
                       version-control-global-margin t)
@@ -202,6 +203,13 @@ It should only modify the values of Spacemacs settings."
    ;; If the value is nil then no banner is displayed. (default 'official)
    dotspacemacs-startup-banner 'official
 
+   ;; Scale factor controls the scaling (size) of the startup banner. Default
+   ;; value is `auto' for scaling the logo automatically to fit all buffer
+   ;; contents, to a maximum of the full image height and a minimum of 3 line
+   ;; heights. If set to a number (int or float) it is used as a constant
+   ;; scaling factor for the default logo size.
+   dotspacemacs-startup-banner-scale 'auto
+
    ;; List of items to show in startup buffer or an association list of
    ;; the form `(list-type . list-size)`. If nil then it is disabled.
    ;; Possible values for list-type are:
@@ -272,7 +280,7 @@ It should only modify the values of Spacemacs settings."
    ;; a non-negative integer (pixel size), or a floating-point (point size).
    ;; Point size is recommended, because it's device independent. (default 10.0)
    dotspacemacs-default-font '("Fira Code"
-                               :size 14.0
+                               :size 12.0
                                :weight normal
                                :width normal)
 
@@ -550,8 +558,7 @@ This function defines the environment variables for your Emacs session. By
 default it calls `spacemacs/load-spacemacs-env' which loads the environment
 variables declared in `~/.spacemacs.env' or `~/.spacemacs.d/.spacemacs.env'.
 See the header of this file for more information."
-  (spacemacs/load-spacemacs-env)
-  (setenv "SSH_AUTH_SOCK" "/run/user/1000/gnupg/S.gpg-agent.ssh"))
+  (spacemacs/load-spacemacs-env))
 
 (defun dotspacemacs/user-init ()
   "Initialization for user code:
@@ -634,7 +641,7 @@ before packages are loaded."
   (with-eval-after-load 'company-coq
     (define-key company-coq-map (kbd "<M-return>") nil)
     )
-  (let ((coq-root (concat (getenv "HOME") "/.opam/default/bin")))
+  (let ((coq-root (concat (getenv "OPAM_SWITCH_PREFIX") "/bin")))
     (setq-default coq-compiler (concat coq-root "/coqc")
                   coq-prog-name (concat coq-root "/coqtop")
                   coq-dependency-analyzer (concat coq-root "/coqdep"))
@@ -667,6 +674,17 @@ before packages are loaded."
     (prettify-symbols-mode -1))
   (add-hook 'dafny-mode-hook #'no-prettification-in-dafny-mode)
 
+  (require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
+
+  ;; Tabs
+  (global-set-key (kbd "C-{") 'spacemacs/tabs-backward)
+  (global-set-key (kbd "C-}") 'spacemacs/tabs-forward)
+  (global-set-key (kbd "C-M-{") 'centaur-tabs-move-current-tab-to-left)
+  (global-set-key (kbd "C-M-}") 'centaur-tabs-move-current-tab-to-right)
+
+  ;; F-star
+  (setq-default fstar-executable "/home/luke/.opam/default/bin/fstar.exe")
+  (setq-default fstar-smt-executable "/home/luke/.opam/default/bin/z3")
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
@@ -684,6 +702,17 @@ This function is called at the very end of Spacemacs initialization."
  '(coq-compile-quick 'ensure-vo)
  '(evil-want-Y-yank-to-eol nil)
  '(package-selected-packages
-   '(dap-mode bui tree-mode gnu-elpa-keyring-update lsp-ui lsp-treemacs lsp-python-ms python helm-lsp cquery company-lsp ccls writeroom-mode visual-fill-column proof-general merlin google-translate evil-magit dumb-jump doom-modeline company-go centered-cursor-mode ace-link auctex counsel swiper ivy company window-purpose helm helm-core flycheck treemacs ace-window avy org-plus-contrib hydra yasnippet-snippets yapfify xterm-color ws-butler winum which-key web-mode web-beautify volatile-highlights visual-regexp vi-tilde-fringe uuidgen utop use-package unfill tuareg treemacs-projectile treemacs-evil toc-org tagedit systemd symon string-inflection spaceline-all-the-icons smeargle slim-mode shrink-path shell-pop seeing-is-believing scss-mode sass-mode rvm ruby-tools ruby-test-mode ruby-refactor ruby-hash-syntax rubocop rspec-mode robe reveal-in-osx-finder restart-emacs rbenv rake rainbow-delimiters pyvenv pytest pyenv-mode py-isort pug-mode prettier-js popwin pippel pipenv pip-requirements pfuture persp-mode pdf-tools pcap-mode password-generator pass paradox overseer osx-trash osx-dictionary org-bullets open-junk-file omnisharp ocp-indent nameless mwim multi-term move-text mmm-mode minitest markdown-toc magit-svn magit-gitflow macrostep lorem-ipsum livid-mode live-py-mode link-hint launchctl json-navigator json-mode js2-refactor js-doc indent-guide importmagic impatient-mode imenu-list hungry-delete ht hlint-refactor hl-todo hindent highlight-parentheses highlight-numbers highlight-indentation hexo helm-xref helm-themes helm-swoop helm-pydoc helm-purpose helm-projectile helm-mode-manager helm-make helm-hoogle helm-gitignore helm-git-grep helm-flx helm-descbinds helm-css-scss helm-company helm-c-yasnippet helm-ag haskell-snippets google-c-style golden-ratio godoctor go-tag go-rename go-impl go-guru go-gen-test go-fill-struct go-eldoc gitignore-templates gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe git-gutter-fringe+ gh-md fuzzy font-lock+ flyspell-correct-helm flycheck-pos-tip flycheck-haskell flx-ido fill-column-indicator fancy-battery eyebrowse expand-region evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-numbers evil-nerd-commenter evil-matchit evil-lisp-state evil-lion evil-indent-plus evil-iedit-state evil-goggles evil-exchange evil-ediff evil-cleverparens evil-args evil-anzu eval-sexp-fu eshell-z eshell-prompt-extras esh-help erc-yt erc-view-log erc-social-graph erc-image erc-hl-nicks emmet-mode elisp-slime-nav eldoc-eval editorconfig dotenv-mode disaster diminish diff-hl cython-mode csv-mode counsel-projectile company-web company-tern company-statistics company-ghci company-coq company-cabal company-c-headers company-auctex company-anaconda column-enforce-mode cmm-mode clean-aindent-mode clang-format chruby bundler browse-at-remote boogie-friends bison-mode auto-yasnippet auto-highlight-symbol auto-dictionary auto-compile auctex-latexmk aggressive-indent ace-jump-helm-line ac-ispell))
- )
+   '(fstar-mode company-quickhelp quick-peek yapfify xterm-color ws-butler winum which-key web-beautify volatile-highlights visual-regexp vi-tilde-fringe uuidgen use-package unfill undo-tree toc-org systemd spaceline powerline smeargle shell-pop restart-emacs rainbow-delimiters pyvenv pytest pyenv-mode py-isort popwin pip-requirements persp-mode pcre2el paradox spinner orgit org-plus-contrib org-bullets open-junk-file omnisharp neotree mwim multi-term move-text mmm-mode markdown-toc magit-gitflow magit-popup magit macrostep lorem-ipsum livid-mode skewer-mode simple-httpd live-py-mode linum-relative link-hint json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc indent-guide hydra lv hy-mode dash-functional hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hexo helm-themes helm-swoop helm-pydoc helm-projectile projectile helm-mode-manager helm-make helm-gitignore request helm-flx helm-descbinds helm-company helm-c-yasnippet helm-ag google-translate golden-ratio gmail-message-mode ham-mode markdown-mode html-to-markdown gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe+ git-gutter-fringe fringe-helper git-gutter+ git-gutter git-commit with-editor transient gh-md fuzzy flyspell-correct-helm flyspell-correct flymd flycheck-pos-tip pos-tip flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist highlight evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-ediff evil-args evil-anzu anzu evil goto-chg eval-sexp-fu eshell-z eshell-prompt-extras esh-help elisp-slime-nav edit-server dumb-jump disaster diminish diff-hl define-word cython-mode csv-mode csharp-mode tree-sitter-langs tree-sitter-indent tree-sitter tsc company-statistics company-c-headers company-auctex company-anaconda column-enforce-mode coffee-mode cmake-mode clean-aindent-mode clang-format boogie-friends company flycheck pkg-info epl bind-map bind-key auto-yasnippet yasnippet auto-highlight-symbol auto-dictionary auto-compile packed auctex-latexmk auctex anaconda-mode pythonic f dash s aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core async ac-ispell auto-complete popup))
+ '(safe-local-variable-values
+   '((coq-prog-name)
+     (coq-compiler)
+     (coq-dependency-analyzer)
+     (dafny-verification-backend)
+     )))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(highlight-parentheses-highlight ((nil (:weight ultra-bold))) t))
 )
