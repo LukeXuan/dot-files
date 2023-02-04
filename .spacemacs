@@ -386,8 +386,8 @@ It should only modify the values of Spacemacs settings."
    dotspacemacs-maximized-at-startup t
 
    ;; If non-nil the frame is undecorated when Emacs starts up. Combine this
-   ;; variable with `dotspacemacs-maximized-at-startup' in OSX to obtain
-   ;; borderless fullscreen. (default nil)
+   ;; variable with `dotspacemacs-maximized-at-startup' to obtain fullscreen
+   ;; without external boxes. Also disables the internal border. (default nil)
    dotspacemacs-undecorated-at-startup nil
 
    ;; A value from the range (0..100), in increasing opacity, which describes
@@ -399,6 +399,11 @@ It should only modify the values of Spacemacs settings."
    ;; the transparency level of a frame when it's inactive or deselected.
    ;; Transparency can be toggled through `toggle-transparency'. (default 90)
    dotspacemacs-inactive-transparency 90
+
+   ;; A value from the range (0..100), in increasing opacity, which describes the
+   ;; transparency level of a frame background when it's active or selected. Transparency
+   ;; can be toggled through `toggle-background-transparency'. (default 90)
+   dotspacemacs-background-transparency 90
 
    ;; If non-nil show the titles of transient states. (default t)
    dotspacemacs-show-transient-state-title t
@@ -509,7 +514,9 @@ It should only modify the values of Spacemacs settings."
    ;; (default nil - same as frame-title-format)
    dotspacemacs-icon-title-format nil
 
-   ;; Show trailing whitespace (default t)
+   ;; Color highlight trailing whitespace in all prog-mode and text-mode derived
+   ;; modes such as c++-mode, python-mode, emacs-lisp, html-mode, rst-mode etc.
+   ;; (default t)
    dotspacemacs-show-trailing-whitespace t
 
    ;; Delete whitespace while saving buffer. Possible values are `all'
@@ -558,7 +565,8 @@ This function defines the environment variables for your Emacs session. By
 default it calls `spacemacs/load-spacemacs-env' which loads the environment
 variables declared in `~/.spacemacs.env' or `~/.spacemacs.d/.spacemacs.env'.
 See the header of this file for more information."
-  (spacemacs/load-spacemacs-env))
+  (spacemacs/load-spacemacs-env)
+)
 
 (defun dotspacemacs/user-init ()
   "Initialization for user code:
@@ -636,16 +644,63 @@ before packages are loaded."
   (spacemacs/set-leader-keys-for-major-mode 'coq-mode
     "as" 'coq-SearchAbout
     )
+  (setq coq-smie-user-tokens
+        '(("," . ":=")
+	        ("∗" . "->")
+	        ("-∗" . "->")
+	        ("∗-∗" . "->")
+	        ("==∗" . "->")
+	        ("=∗" . "->") 			;; Hack to match ={E1,E2}=∗
+	        ("|==>" . ":=")
+	        ("⊢" . "->")
+	        ("⊣⊢" . "->")
+	        ("↔" . "->")
+	        ("←" . "<-")
+	        ("→" . "->")
+	        ("=" . "->")
+	        ("==" . "->")
+	        ("/\\" . "->")
+	        ("⋅" . "->")
+	        (":>" . ":=")
+	        ("by" . "now")
+	        ("forall" . "now")              ;; NB: this breaks current ∀ indentation.
+          ))
   (setq coq-compile-before-require t)
   (put 'company-coq-fold 'disabled nil)
+  (defun pg-in-protected-region-p ()
+    (< (point) (proof-queue-or-locked-end)))
+
+  (defmacro coq-wrap-edit (action)
+    `(if (or (not proof-locked-span)
+             (equal (proof-queue-or-locked-end) (point-min)))
+         (,action)
+       (,action)
+       (when (pg-in-protected-region-p)
+         (proof-goto-point))))
+
+  (defun coq-redo ()
+    (interactive)
+    (coq-wrap-edit undo-tree-redo))
+
+  (defun coq-undo ()
+    (interactive)
+    (coq-wrap-edit undo-tree-undo))
+
   (with-eval-after-load 'company-coq
-    (define-key company-coq-map (kbd "<M-return>") nil)
+    (define-key company-coq-map (kbd "M-<return>") nil)
+    (define-key coq-mode-map (kbd "C-_") 'coq-undo)
+    (define-key coq-mode-map (kbd "M-_") 'coq-redo)
     )
+
+  (add-hook 'coq-mode-hook #'undo-tree-mode)
   (let ((coq-root (concat (getenv "OPAM_SWITCH_PREFIX") "/bin")))
     (setq-default coq-compiler (concat coq-root "/coqc")
                   coq-prog-name (concat coq-root "/coqtop")
                   coq-dependency-analyzer (concat coq-root "/coqdep"))
     )
+  (put 'coq-prog-name 'safe-local-variable #'stringp)
+  (put 'coq-dependency-analyzer 'safe-local-variable #'stringp)
+  (put 'coq-compiler 'safe-local-variable #'stringp)
 
   ;; CSharp
   (c-add-style "csharp-style"
@@ -674,7 +729,7 @@ before packages are loaded."
     (prettify-symbols-mode -1))
   (add-hook 'dafny-mode-hook #'no-prettification-in-dafny-mode)
 
-  (require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
+  (require 'opam-user-setup (concat (getenv "HOME") "/.emacs.d/opam-user-setup.el"))
 
   ;; Tabs
   (global-set-key (kbd "C-{") 'spacemacs/tabs-backward)
@@ -683,8 +738,8 @@ before packages are loaded."
   (global-set-key (kbd "C-M-}") 'centaur-tabs-move-current-tab-to-right)
 
   ;; F-star
-  (setq-default fstar-executable "/home/luke/.opam/default/bin/fstar.exe")
-  (setq-default fstar-smt-executable "/home/luke/.opam/default/bin/z3")
+  (setq-default fstar-executable (concat (getenv "HOME") "/.local/share/fstar/bin/fstar.exe"))
+  (setq-default fstar-smt-executable (concat (getenv "HOME") "/.opam/default/bin/z3"))
   )
 
 ;; Do not write anything past this comment. This is where Emacs will
@@ -702,13 +757,7 @@ This function is called at the very end of Spacemacs initialization."
  '(coq-compile-quick 'ensure-vo)
  '(evil-want-Y-yank-to-eol nil)
  '(package-selected-packages
-   '(fstar-mode company-quickhelp quick-peek yapfify xterm-color ws-butler winum which-key web-beautify volatile-highlights visual-regexp vi-tilde-fringe uuidgen use-package unfill undo-tree toc-org systemd spaceline powerline smeargle shell-pop restart-emacs rainbow-delimiters pyvenv pytest pyenv-mode py-isort popwin pip-requirements persp-mode pcre2el paradox spinner orgit org-plus-contrib org-bullets open-junk-file omnisharp neotree mwim multi-term move-text mmm-mode markdown-toc magit-gitflow magit-popup magit macrostep lorem-ipsum livid-mode skewer-mode simple-httpd live-py-mode linum-relative link-hint json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc indent-guide hydra lv hy-mode dash-functional hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hexo helm-themes helm-swoop helm-pydoc helm-projectile projectile helm-mode-manager helm-make helm-gitignore request helm-flx helm-descbinds helm-company helm-c-yasnippet helm-ag google-translate golden-ratio gmail-message-mode ham-mode markdown-mode html-to-markdown gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe+ git-gutter-fringe fringe-helper git-gutter+ git-gutter git-commit with-editor transient gh-md fuzzy flyspell-correct-helm flyspell-correct flymd flycheck-pos-tip pos-tip flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist highlight evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-ediff evil-args evil-anzu anzu evil goto-chg eval-sexp-fu eshell-z eshell-prompt-extras esh-help elisp-slime-nav edit-server dumb-jump disaster diminish diff-hl define-word cython-mode csv-mode csharp-mode tree-sitter-langs tree-sitter-indent tree-sitter tsc company-statistics company-c-headers company-auctex company-anaconda column-enforce-mode coffee-mode cmake-mode clean-aindent-mode clang-format boogie-friends company flycheck pkg-info epl bind-map bind-key auto-yasnippet yasnippet auto-highlight-symbol auto-dictionary auto-compile packed auctex-latexmk auctex anaconda-mode pythonic f dash s aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core async ac-ispell auto-complete popup))
- '(safe-local-variable-values
-   '((coq-prog-name)
-     (coq-compiler)
-     (coq-dependency-analyzer)
-     (dafny-verification-backend)
-     )))
+   '(elcord fstar-mode company-quickhelp quick-peek yapfify xterm-color ws-butler winum which-key web-beautify volatile-highlights visual-regexp vi-tilde-fringe uuidgen use-package unfill undo-tree toc-org systemd spaceline powerline smeargle shell-pop restart-emacs rainbow-delimiters pyvenv pytest pyenv-mode py-isort popwin pip-requirements persp-mode pcre2el paradox spinner orgit org-plus-contrib org-bullets open-junk-file omnisharp neotree mwim multi-term move-text mmm-mode markdown-toc magit-gitflow magit-popup magit macrostep lorem-ipsum livid-mode skewer-mode simple-httpd live-py-mode linum-relative link-hint json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc indent-guide hydra lv hy-mode dash-functional hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hexo helm-themes helm-swoop helm-pydoc helm-projectile projectile helm-mode-manager helm-make helm-gitignore request helm-flx helm-descbinds helm-company helm-c-yasnippet helm-ag google-translate golden-ratio gmail-message-mode ham-mode markdown-mode html-to-markdown gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link git-gutter-fringe+ git-gutter-fringe fringe-helper git-gutter+ git-gutter git-commit with-editor transient gh-md fuzzy flyspell-correct-helm flyspell-correct flymd flycheck-pos-tip pos-tip flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist highlight evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-ediff evil-args evil-anzu anzu evil goto-chg eval-sexp-fu eshell-z eshell-prompt-extras esh-help elisp-slime-nav edit-server dumb-jump disaster diminish diff-hl define-word cython-mode csv-mode csharp-mode tree-sitter-langs tree-sitter-indent tree-sitter tsc company-statistics company-c-headers company-auctex company-anaconda column-enforce-mode coffee-mode cmake-mode clean-aindent-mode clang-format boogie-friends company flycheck pkg-info epl bind-map bind-key auto-yasnippet yasnippet auto-highlight-symbol auto-dictionary auto-compile packed auctex-latexmk auctex anaconda-mode pythonic f dash s aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core async ac-ispell auto-complete popup)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
